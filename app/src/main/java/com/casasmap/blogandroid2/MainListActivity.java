@@ -1,16 +1,22 @@
 package com.casasmap.blogandroid2;
 
+import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.content.Context;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.ArrayAdapter;
+import android.view.View;
+import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.SimpleAdapter;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -24,19 +30,30 @@ import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 public class MainListActivity extends ListActivity {
-    public String[] blogPostTitles;
+    //public String[] mBlogPostTitlesFromJSON;
     public static final String TAG = MainListActivity.class.getSimpleName();
     public static final int NUMBER_OF_POSTS = 20;
     public JSONObject mBlogData;
+    protected ProgressBar mProgressBar;
+    public final String KEY_TITLE = "title";
+    public final String KEY_AUTHOR = "author";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_list);
+
+        mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
         if(isNetworkAvailable()) {
-            Toast.makeText(this, "You are now connected", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(this, "You are now connected", Toast.LENGTH_SHORT).show();
+
+            //starting the progressbar
+            mProgressBar.setVisibility(View.VISIBLE);
+
             GetBlogPostsTask mGetBlogPostsTask = new GetBlogPostsTask();
             mGetBlogPostsTask.execute();
 
@@ -46,6 +63,24 @@ public class MainListActivity extends ListActivity {
 
 //        ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, OSSystems);
 //        setListAdapter(arrayAdapter);
+    }
+
+    @Override
+    protected void onListItemClick(ListView l, View v, int position, long id) {
+        super.onListItemClick(l, v, position, id);
+        try{
+            JSONArray jsonPosts = mBlogData.getJSONArray("posts");
+            JSONObject jsonPost = jsonPosts.getJSONObject(position);
+            String blogUrl = jsonPost.getString("url");
+            // starting the intent
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setData(Uri.parse(blogUrl));
+            startActivity(intent);
+
+
+        }catch (Exception e){
+
+        }
     }
 
     private boolean isNetworkAvailable() {
@@ -80,29 +115,59 @@ public class MainListActivity extends ListActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    public void updateList(){
+    public void handleJsonResult(){
+        mProgressBar.setVisibility(View.INVISIBLE);
         if(mBlogData == null){
-            //TODO: something here
+
+            showErrorDialog();
         }else
             try {
                 JSONArray postArray = mBlogData.getJSONArray("posts");
-                blogPostTitles = new String[postArray.length()];
+                ArrayList<HashMap<String, String>> arrayList = new ArrayList<HashMap<String, String>>();
                 for(int i = 0; i<postArray.length(); i++)
                 {
                     JSONObject abc = postArray.getJSONObject(i);
-                    blogPostTitles[i] = String.valueOf(Html.fromHtml(abc.getString("title")));
+                    String title = abc.getString(KEY_TITLE);
+                    title = String.valueOf(Html.fromHtml(title));
+                    String author = abc.getString(KEY_AUTHOR);
+                    author = String.valueOf(Html.fromHtml(author));
+
+                    HashMap<String, String> hashPost = new HashMap<String, String>();
+                    hashPost.put(KEY_TITLE, title);
+                    hashPost.put(KEY_AUTHOR, author);
+
+                    arrayList.add(hashPost);
+
+
+                   // mBlogPostTitlesFromJSON[i] = String.valueOf(Html.fromHtml(abc.getString("title")));
 
                 }
 //        ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, OSSystems);
 //        setListAdapter(arrayAdapter);
-                ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, blogPostTitles);
-                setListAdapter(arrayAdapter);
+                //ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, mBlogPostTitlesFromJSON);
+                String[] keys = {KEY_TITLE, KEY_AUTHOR};
+                int[] ids = {android.R.id.text1, android.R.id.text2};
+
+                SimpleAdapter adapter = new SimpleAdapter(this, arrayList, android.R.layout.simple_list_item_2, keys, ids );
+
+                setListAdapter(adapter);
+
                // Log.d(TAG, mBlogData.toString(2));
             } catch (JSONException e) {
                 Log.e(TAG, "Exception caught!" + e);
             }
 
     }
+
+    private void showErrorDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.title);
+        builder.setMessage(R.string.message);
+        builder.setPositiveButton(android.R.string.ok, null);
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
     private class GetBlogPostsTask extends AsyncTask<Object, Void, JSONObject>{
         private int responseCode = -1;
 
@@ -151,7 +216,7 @@ public class MainListActivity extends ListActivity {
         }
         protected void onPostExecute(JSONObject result){
             mBlogData = result;
-            updateList();
+            handleJsonResult();
 
         }
     }

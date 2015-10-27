@@ -2,4 +2,6 @@
     <string name="app_name">Blog Android 2</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="title">Opps sorry, something went wrong!</string>
+    <string name="message">We dont know for sure what happned, but were doing something about now!</string>
 </resources>
