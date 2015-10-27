@@ -79,6 +79,7 @@ public class MainListActivity extends ListActivity {
 
 
         }catch (Exception e){
+            Log.d(TAG, "Exception caught!", e);
 
         }
     }
